@@ -1,4 +1,4 @@
-let viewMode = "list";
+let viewMode = "kanban";
 let lastData = null;
 let activeSpace = null;
 
@@ -15,11 +15,9 @@ let activeSpace = null;
         <div class="td-left-head">
           <div class="td-title">Spaces</div>
           <button class="btn btn-xs btn-primary td-new-space-btn" title="Create New Space">+ New Space</button>
-
           <button class="btn btn-xs btn-default td-refresh">↻</button>
         </div>
-        <div class="td-spaces">
-        </div>
+        <div class="td-spaces"></div>
       </div>
 
       <div class="td-main">
@@ -38,7 +36,7 @@ let activeSpace = null;
           </div>
         </div>
         <div class="td-scroll">
-            <div class="td-content"></div>
+          <div class="td-content"></div>
         </div>
       </div>
     </div>
@@ -53,7 +51,7 @@ let activeSpace = null;
   const elContent = root.querySelector(".td-content");
 
   // ------------------------------
-  // RPC helper (correct format)
+  // RPC helper
   // ------------------------------
   async function rpc(method, args = {}) {
     const r = await frappe.call({ method, args });
@@ -95,7 +93,7 @@ let activeSpace = null;
   }
 
   // ------------------------------
-  // Render: Kanban
+  // Render: Kanban 
   // ------------------------------
   function renderKanban(data) {
     const board = data.board || {};
@@ -108,33 +106,167 @@ let activeSpace = null;
 
     elContent.innerHTML = `
       <div class="td-board">
-        ${statuses
-        .map(s => {
+        ${statuses.map(s => {
           const items = board[s.name] || [];
           return `
-              <div class="td-col" data-status="${s.name}">
-                <div class="td-col-head">
-                  <div class="td-col-title">${frappe.utils.escape_html(s.status_name)}</div>
-                  <div class="td-col-count">${items.length}</div>
-                </div>
-                <div class="td-col-body">
-                  ${items
-              .map(
-                t => `
-                        <div class="td-card" data-task="${t.name}">
-                          <div class="t">${frappe.utils.escape_html(t.title_tasks || t.name)}</div>
-                          <div class="m">${frappe.utils.escape_html(t.priority || "")}</div>
-                        </div>
-                      `
-              )
-              .join("")}
+            <div class="td-col" data-status="${s.name}">
+              <div class="td-col-head">
+                <div class="td-col-title">${frappe.utils.escape_html(s.status_name)}</div>
+                <div class="td-col-count">${items.length}</div>
+              </div>
+
+              <div class="td-col-body" data-status="${s.name}">
+                ${items.map(t => `
+                  <div class="td-card" draggable="true" data-task="${t.name}">
+                    <div class="t">${frappe.utils.escape_html(t.title_tasks || t.name)}</div>
+                  </div>
+                `).join("")}
+                <div class="td-card td-add-card" data-add-status="${s.name}">
+                  <div class="t">+ Add Task</div>
                 </div>
               </div>
-            `;
-        })
-        .join("")}
+            </div>
+          `;
+        }).join("")}
       </div>
     `;
+
+    enableKanbanDrag();
+    bindAddTaskCards(data);
+  }
+  //create the specific task
+
+  function bindAddTaskCards(boardData) {
+  elContent.querySelectorAll(".td-add-card").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!activeSpace) {
+        frappe.msgprint("Please select a space first.");
+        return;
+      }
+
+      const statusDocname = btn.dataset.addStatus; // Task Status docname
+      const statusRow = (boardData.statuses || []).find(s => s.name === statusDocname);
+
+      const d = new frappe.ui.Dialog({
+        title: "New Task",
+        fields: [
+          { fieldtype: "Data", fieldname: "title_tasks", label: "Title", reqd: 1 },
+          { fieldtype: "Text Editor", fieldname: "description", label: "Description" },
+          {
+            fieldtype: "Select",
+            fieldname: "priority",
+            label: "Priority",
+            options: ["", "Low", "Medium", "High", "Urgent"].join("\n")
+          },
+          {
+            fieldtype: "Data",
+            fieldname: "status_label",
+            label: "Status",
+            default: statusRow ? statusRow.status_name : statusDocname,
+            read_only: 1
+          },
+          { fieldtype: "Link", fieldname: "assign_to", label: "Assign To", options: "User" }
+        ],
+        primary_action_label: "Create",
+        primary_action: async (values) => {
+          await rpc("tasks.api.dashboard.create_task", {
+            space: activeSpace,
+            title_tasks: values.title_tasks,
+            description: values.description,
+            priority: values.priority,
+            task_status: statusDocname,   
+            assign_to: values.assign_to
+          });
+
+          d.hide();
+          const refreshed = await fetchBoard(activeSpace);
+          lastData = refreshed;
+          renderKanban(refreshed);
+          frappe.show_alert({ message: "Task Created", indicator: "green" });
+        }
+      });
+
+      d.show();
+    });
+  });
+}
+
+
+  function enableKanbanDrag() {
+    let draggingTask = null;
+    let fromStatus = null;
+
+    // drag start/end on cards
+    elContent.querySelectorAll(".td-card[draggable='true']").forEach(card => {
+      card.addEventListener("dragstart", (e) => {
+        draggingTask = card.dataset.task;
+        const body = card.closest(".td-col-body");
+        fromStatus = body?.dataset.status || null;
+
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", draggingTask);
+        e.dataTransfer.add("dragging");
+      });
+
+      card.addEventListener("dragend", () => {
+        card.classList.remove("dragging");
+        draggingTask = null;
+        fromStatus = null;
+      });
+    });
+
+    // drop zones
+    elContent.querySelectorAll(".td-col-body").forEach(body => {
+      body.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        body.classList.add("dragover");
+      });
+
+      body.addEventListener("dragleave", () => {
+        body.classList.remove("dragover");
+      });
+
+      body.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        body.classList.remove("dragover");
+
+        const toStatus = body.dataset.status; // status docname
+        const taskName = e.dataTransfer.getData("text/plain") || draggingTask;
+
+        if (!taskName || !toStatus) return;
+        if (toStatus === fromStatus) return;
+
+        // optimistic move
+        const cardEl = elContent.querySelector(`.td-card[data-task="${taskName}"]`);
+        if (cardEl) body.appendChild(cardEl);
+
+        try {
+          await rpc("tasks.api.dashboard.move_task", {
+            task: taskName,
+            to_status: toStatus,
+            space: activeSpace
+          });
+
+          // refresh board for accurate counts
+          const refreshed = await fetchBoard(activeSpace);
+          lastData = refreshed;
+          renderKanban(refreshed);
+
+        } catch (err) {
+          frappe.msgprint({
+            title: "Could not move task",
+            message: err.message || err,
+            indicator: "red"
+          });
+
+          // revert by reload
+          const refreshed = await fetchBoard(activeSpace);
+          lastData = refreshed;
+          renderKanban(refreshed);
+        }
+      });
+    });
   }
 
   // ------------------------------
@@ -143,7 +275,7 @@ let activeSpace = null;
   async function loadSpace(spaceDocName) {
     activeSpace = spaceDocName;
 
-    // highlight active
+    // highlight active child space
     [...elSpaces.querySelectorAll(".td-space")].forEach(x => {
       x.classList.toggle("active", x.dataset.name === spaceDocName);
     });
@@ -161,45 +293,36 @@ let activeSpace = null;
   }
 
   // ------------------------------
-  // Render spaces list
+  // Spaces Tree (Group -> Children)
   // ------------------------------
+  const openedGroups = new Set();
 
-  const openedGroups = new Set(); 
-
-  function getParentField(spaces) { // call parent field name from api response
+  function getParentField(spaces) {
     if (!spaces?.length) return null;
     const s = spaces[0];
-    return (
-      ("space_group" in s && "space_group") ||
-      null
-    );
+    // Your API uses: space_group (based on your code)
+    return ("space_group" in s && "space_group") || null;
   }
 
   function buildTreeSections(spaces) {
     const parentField = getParentField(spaces);
-    const childMap = new Map(); //parent to child[]
-    const byName = new Map(spaces.map(s => [s.name, s]));
 
+    const childMap = new Map(); // parentName -> children[]
     for (const s of spaces) {
-      const parent = parentField ? (s[parentField] || null): null;
+      const parent = parentField ? (s[parentField] || null) : null;
       if (!childMap.has(parent)) childMap.set(parent, []);
       childMap.get(parent).push(s);
     }
 
-    const roots = childMap.get(null) || []; // main/root node
+    const roots = childMap.get(null) || [];
+    const mains = roots.filter(r => !!r.is_group);
 
-    const mains = roots.filter(r => !!r.is_group); // child/sub group node
-
-    mains.sort((a, b) => (a.space_name || "").localeCompare(b.spaceName || ""));
+    mains.sort((a, b) => (a.space_name || "").localeCompare(b.space_name || ""));
 
     return mains.map(group => {
-      const kids= (childMap.get(group.name) || []).filter(x => !x.is_group);
+      const kids = (childMap.get(group.name) || []).filter(x => !x.is_group);
       kids.sort((a, b) => (a.space_name || "").localeCompare(b.space_name || ""));
-
-      return{
-        group,
-        items:kids
-      };
+      return { group, items: kids };
     });
   }
 
@@ -214,75 +337,63 @@ let activeSpace = null;
     const sections = buildTreeSections(spaces);
 
     if (!sections.length) {
-      elSpaces.innerHTML = `<dic class="text-muted">No group spaces found.</div>`;
+      elSpaces.innerHTML = `<div class="text-muted">No group spaces found.</div>`;
+      return;
     }
 
-    // render collapsible groups + child spaces
+    // auto open first group
+    if (!openedGroups.size) openedGroups.add(sections[0].group.name);
+
     elSpaces.innerHTML = sections.map(sec => {
       const g = sec.group;
       const isOpen = openedGroups.has(g.name);
 
-    return `
-      <div class="td-sec" data-group="${g.name}">
-        <div class="td-sec-head" data-action="toggle" data-name="${g.name}">
-          <span class="td-sec-title">${frappe.utils.escape_html(g.space_name || g.name)}</span>
-          <span class="td-chev">${isOpen ? "▾" : "▸"}</span> 
+      return `
+        <div class="td-sec" data-group="${g.name}">
+          <div class="td-sec-head" data-name="${g.name}">
+            <span class="td-sec-title">${frappe.utils.escape_html(g.space_name || g.name)}</span>
+            <span class="td-chev">${isOpen ? "▾" : "▸"}</span>
+          </div>
+
+          <div class="td-sec-body" style="display:${isOpen ? "block" : "none"}">
+            ${sec.items.map(ch => `
+              <div class="td-space" data-name="${ch.name}">
+                <div style="font-weight:600">${frappe.utils.escape_html(ch.space_name || ch.name)}</div>
+              </div>
+            `).join("")}
+          </div>
         </div>
+      `;
+    }).join("");
 
-        <div class="td-sec-body" style="display:${isOpen ? "block" : "none"}">
-          ${sec.items.map(ch => `
-            <div class="td-space" data-name="${ch.name}">
-              <div style="font-weight:600">${frappe.utils.escape_html(ch.space_name || ch.name)}</div>
-            </div>
-          `).join("")}
-        </div>
-      </div>
-    `;
-  }).join("");
+    // toggle group open/close
+    elSpaces.querySelectorAll(".td-sec-head").forEach(head => {
+      head.addEventListener("click", () => {
+        const groupName = head.dataset.name;
+        const sec = head.closest(".td-sec");
+        const body = sec.querySelector(".td-sec-body");
+        const chev = sec.querySelector(".td-chev");
 
-  // toggle group open/close
-  elSpaces.querySelectorAll(".td-sec-head").forEach(head => {
-    head.addEventListener("click", ()=>{
-      const groupName = head.dataset.name;
-      const sec = head.closest(".td-sec");
-      const body = sec.querySelector(".td-sec-body");
-      const chev = sec.querySelector(".td-chev");
-      
-      const isOpen = body.style.display !== "none";
-      body.style.display = isOpen ? "none" : "block";
-      chev.textContent = isOpen ? "▸" : "▾";
+        const isOpen = body.style.display !== "none";
+        body.style.display = isOpen ? "none" : "block";
+        chev.textContent = isOpen ? "▸" : "▾";
 
-      if (isOpen) openedGroups.delete(groupName);
-      else openedGroups.add(groupName);
+        if (isOpen) openedGroups.delete(groupName);
+        else openedGroups.add(groupName);
+      });
     });
-  });
 
-  // child click -> loadSpace
-  elSpaces.querySelectorAll(".td-space").forEach(btn =>{
-    btn.addEventListener("click", (e) =>{
-      e.stopPropagation();// don't toggle group when clicking child
-      loadSpace(btn.dataset.name);
+    // child click -> loadSpace
+    elSpaces.querySelectorAll(".td-space").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        loadSpace(btn.dataset.name);
+      });
     });
-  });
 
-  await loadSpace(firstGroup.items[0].name);
-
-    // elSpaces.innerHTML = spaces
-    //   .map(
-    //     s => `
-    //       <div class="td-space" data-name="${s.name}">
-    //         <div style="font-weight:600">${frappe.utils.escape_html(s.space_name)}</div>
-    //       </div>
-    //     `
-    //   )
-    //   .join("");
-
-    // elSpaces.querySelectorAll(".td-space").forEach(btn => {
-    //   btn.addEventListener("click", () => loadSpace(btn.dataset.name));
-    // });
-
-    // // auto open first
-    // await loadSpace(spaces[0].name);
+    // auto open first child space
+    const firstChild = sections[0]?.items?.[0];
+    if (firstChild) await loadSpace(firstChild.name);
   }
 
   // ------------------------------
@@ -301,8 +412,7 @@ let activeSpace = null;
     });
   });
 
-  // default selected = list
-  root.querySelector('.td-view[data-view="list"]').classList.add("btn-primary");
+  root.querySelector('.td-view[data-view="kanban"]').classList.add("btn-primary");
 
   // ------------------------------
   // New Task Dialog
@@ -313,7 +423,6 @@ let activeSpace = null;
       return;
     }
 
-    // refresh board to get latest statuses
     const data = await fetchBoard(activeSpace);
 
     const d = new frappe.ui.Dialog({
@@ -352,9 +461,13 @@ let activeSpace = null;
     d.show();
   });
 
-  // refresh button
+  // ------------------------------
+  // Refresh button
+  // ------------------------------
   root.querySelector(".td-refresh").addEventListener("click", renderSpaces);
 
-  // init
+  // ------------------------------
+  // Init
+  // ------------------------------
   renderSpaces();
 })();

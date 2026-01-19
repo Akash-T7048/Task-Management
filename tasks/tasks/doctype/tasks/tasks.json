@@ -1,0 +1,168 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:title_tasks",
+ "creation": "2026-01-09 14:56:46.362834",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title_tasks",
+  "description",
+  "column_break_ozkd",
+  "to_department",
+  "from_department",
+  "tasks_list",
+  "space",
+  "task_status",
+  "parent_task",
+  "priority",
+  "completed_on",
+  "section_break_ugit",
+  "dependent_tasks",
+  "timesheet_table"
+ ],
+ "fields": [
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "title_tasks",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "Title / Task",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor",
+   "label": "Description "
+  },
+  {
+   "fieldname": "column_break_ozkd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "to_department",
+   "fieldtype": "Link",
+   "label": "To Department",
+   "options": "HKM Departments",
+   "reqd": 1
+  },
+  {
+   "fieldname": "from_department",
+   "fieldtype": "Link",
+   "label": "From Department",
+   "options": "HKM Departments"
+  },
+  {
+   "fieldname": "tasks_list",
+   "fieldtype": "Link",
+   "label": "Task Category",
+   "options": "Task Category"
+  },
+  {
+   "fieldname": "space",
+   "fieldtype": "Link",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "label": "space",
+   "options": "Tasks Space",
+   "reqd": 1
+  },
+  {
+   "fieldname": "task_status",
+   "fieldtype": "Link",
+   "in_filter": 1,
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Task Status",
+   "reqd": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "parent_task",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "label": "Parent Task",
+   "options": "Tasks"
+  },
+  {
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Priority",
+   "options": "Low\nMedium\nHigh\nUrgent"
+  },
+  {
+   "fieldname": "completed_on",
+   "fieldtype": "Date",
+   "label": "Completed On"
+  },
+  {
+   "fieldname": "section_break_ugit",
+   "fieldtype": "Section Break",
+   "label": "Dependencies"
+  },
+  {
+   "fieldname": "dependent_tasks",
+   "fieldtype": "Table",
+   "label": "Dependent Tasks",
+   "options": "Depends On Table"
+  },
+  {
+   "fieldname": "timesheet_table",
+   "fieldtype": "Table",
+   "label": "Timesheet Table",
+   "options": "Timesheet Table"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-19 13:52:30.886759",
+ "modified_by": "Administrator",
+ "module": "Tasks",
+ "name": "Tasks",
+ "naming_rule": "By fieldname",
+ "nsm_parent_field": "parent_tasks",
+ "owner": "jaypatel51895@gmail.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Task Management User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Task Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

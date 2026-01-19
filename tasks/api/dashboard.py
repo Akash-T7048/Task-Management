@@ -109,6 +109,22 @@ def create_task(space, title_tasks, description=None, priority=None, task_status
     doc.insert(ignore_permissions=True)
     return {"name": doc.name}
 
+
+# make the task draggable
 @frappe.whitelist()
-def get_dashboard_html():
-    return frappe.render_template("tasks/page/tasks_dashboard/tasks_dashboard.html", {})
+def move_task(task, to_status, space=None):
+    if not task or not to_status:
+        frappe.throw("Missing task or status")
+
+    doc = frappe.get_doc("Tasks", task)
+    doc.check_permission("write")
+
+    # Optional safety check
+    if space and doc.space != space:
+        frappe.throw("Task does not belong to this space")
+
+    doc.task_status = to_status
+    doc.save()
+
+    frappe.db.commit()
+    return {"ok": True}
