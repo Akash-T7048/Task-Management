@@ -8,6 +8,8 @@
  "field_order": [
   "title_tasks",
   "description",
+  "due_date",
+  "assigned_to",
   "column_break_ozkd",
   "to_department",
   "from_department",
@@ -17,6 +19,7 @@
   "parent_task",
   "priority",
   "completed_on",
+  "total_working_hours",
   "section_break_ugit",
   "dependent_tasks",
   "timesheet_table"
@@ -57,7 +60,7 @@
    "fieldname": "tasks_list",
    "fieldtype": "Link",
    "label": "Task Category",
-   "options": "Task Category"
+   "options": "Tasks Category"
   },
   {
    "fieldname": "space",
@@ -70,11 +73,10 @@
   },
   {
    "fieldname": "task_status",
-   "fieldtype": "Link",
+   "fieldtype": "Select",
    "in_filter": 1,
    "in_list_view": 1,
    "label": "Status",
-   "options": "Task Status",
    "reqd": 1
   },
   {
@@ -113,13 +115,32 @@
    "fieldtype": "Table",
    "label": "Timesheet Table",
    "options": "Timesheet Table"
+  },
+  {
+   "fieldname": "total_working_hours",
+   "fieldtype": "Float",
+   "label": "Total Working Hours",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date"
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "assigned_to",
+   "fieldtype": "Link",
+   "label": "Assigned To",
+   "options": "User"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-19 13:52:30.886759",
- "modified_by": "Administrator",
+ "modified": "2026-01-21 12:09:44.479244",
+ "modified_by": "akashtomar8811@gmail.com",
  "module": "Tasks",
  "name": "Tasks",
  "naming_rule": "By fieldname",

@@ -93,7 +93,7 @@ let activeSpace = null;
   }
 
   // ------------------------------
-  // Render: Kanban 
+  // Render: Kanban (DRAGGABLE)
   // ------------------------------
   function renderKanban(data) {
     const board = data.board || {};
@@ -116,9 +116,11 @@ let activeSpace = null;
               </div>
 
               <div class="td-col-body" data-status="${s.name}">
-                ${items.map(t => `
+                ${items.map(t => `   bb            
                   <div class="td-card" draggable="true" data-task="${t.name}">
                     <div class="t">${frappe.utils.escape_html(t.title_tasks || t.name)}</div>
+                    <div class="m">${frappe.utils.escape_html(t.priority || "")}</div>
+                    <div class="m">${frappe.utils.escape_html(t._user_tags || "")}</div>
                   </div>
                 `).join("")}
                 <div class="td-card td-add-card" data-add-status="${s.name}">
